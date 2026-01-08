@@ -10,7 +10,7 @@ import { FileSearch } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'dashboard' | 'editor' | 'templates' | 'settings'>('dashboard');
-  
+
   const [categories, setCategories] = useState<CategoryDef[]>([
     { id: 'iso', name: '品質文件 (ISO)', color: 'blue', type: 'system' },
     { id: 'hr', name: '人事規章 (HR)', color: 'purple', type: 'system' },
@@ -18,14 +18,14 @@ const App: React.FC = () => {
   ]);
 
   const [variableProfiles, setVariableProfiles] = useState<VariableProfile[]>([
-    { 
-      id: 'default', 
-      profileName: '預設公司', 
-      variables: { 
-        'COMPANY_NAME': '範例科技有限公司', 
+    {
+      id: 'default',
+      profileName: '預設公司',
+      variables: {
+        'COMPANY_NAME': '範例科技有限公司',
         'TAX_ID': '88888888',
-        'CEO': '王大明' 
-      } 
+        'CEO': '王大明'
+      }
     }
   ]);
 
@@ -43,6 +43,15 @@ const App: React.FC = () => {
       author: 'Admin',
       createdAt: '2023-10-01',
       status: 'approved',
+      reviewers: [
+        { id: 'r1', name: '陳經理', status: 'approved', date: '2023-10-02', note: 'Email 確認 OK' }
+      ],
+      finalApprover: {
+        name: '吳總經理',
+        status: 'approved',
+        date: '2023-10-03',
+        note: '簽呈核准'
+      },
       sections: [
         { id: 's1', title: '範圍', content: '本手冊涵蓋 {{COMPANY_NAME}} 所有產品之生產與銷售流程。' },
         { id: 's2', title: '引用標準', content: 'ISO 9001:2015 品質管理系統。' }
@@ -71,6 +80,8 @@ const App: React.FC = () => {
       category: template?.category || categories[0].id,
       department: template?.department || '未分類',
       author: '使用者',
+      reviewers: [],
+      finalApprover: { name: '管理代表', status: 'pending' },
       createdAt: new Date().toISOString(),
       status: 'draft',
       sections: JSON.parse(JSON.stringify(template?.sections || [
@@ -83,25 +94,35 @@ const App: React.FC = () => {
     setActiveView('editor');
   };
 
-  const handleCreateRevision = (oldDoc: ISODocument) => {
-    // 解析目前版本並加 1
+  const handleCreateRevision = (oldDoc: ISODocument, type: 'major' | 'minor' = 'major') => {
     const currentVerNum = parseFloat(oldDoc.version) || 0;
-    const nextVer = (currentVerNum + 1).toFixed(1);
+    let nextVer = '';
+    let nextStatus: 'draft' | 'approving' = 'draft';
+
+    if (type === 'major') {
+      nextVer = (Math.floor(currentVerNum) + 1).toFixed(1); // 1.5 -> 2.0
+      nextStatus = 'draft';
+    } else {
+      nextVer = (currentVerNum + 0.1).toFixed(1); // 1.0 -> 1.1
+      nextStatus = 'approving'; // Fast-track to final approval
+    }
 
     const newRev: ISODocument = {
-      ...JSON.parse(JSON.stringify(oldDoc)), // 深拷貝內容
+      ...JSON.parse(JSON.stringify(oldDoc)),
       id: Date.now().toString(),
       version: nextVer,
-      status: 'draft',
+      status: nextStatus, // draft or approving
       createdAt: new Date().toISOString(),
-      approvalLog: undefined, // 清除舊的核准紀錄
+      approvalLog: undefined,
+      reviewers: [], // Always reset reviewers for new version
+      finalApprover: { name: oldDoc.finalApprover.name, status: 'pending' }, // Keep approver name
       revisions: [
         ...oldDoc.revisions,
         {
           id: Date.now().toString() + "-rev",
           version: oldDoc.version,
           date: new Date().toISOString().split('T')[0],
-          description: `基於版本 ${oldDoc.version} 建立之修訂版`,
+          description: type === 'minor' ? '行政勘誤 / Typo Correction' : `基於版本 ${oldDoc.version} 建立之修訂版`,
           author: '使用者'
         }
       ]
@@ -146,29 +167,29 @@ const App: React.FC = () => {
     switch (activeView) {
       case 'dashboard':
         return (
-          <Dashboard 
-            documents={documents} 
+          <Dashboard
+            documents={documents}
             categories={categories}
-            onEdit={handleEdit} 
+            onEdit={handleEdit}
             onRevise={handleCreateRevision}
-            onCreate={() => setActiveView('templates')} 
+            onCreate={() => setActiveView('templates')}
           />
         );
       case 'templates':
         return (
-          <TemplateGallery 
-            userTemplates={userTemplates} 
+          <TemplateGallery
+            userTemplates={userTemplates}
             categories={categories}
-            onSelect={handleCreateNew} 
-            onBack={() => setActiveView('dashboard')} 
+            onSelect={handleCreateNew}
+            onBack={() => setActiveView('dashboard')}
           />
         );
       case 'settings':
         return (
-          <Settings 
-            categories={categories} 
-            onAddCategory={handleAddCategory} 
-            onDeleteCategory={handleDeleteCategory} 
+          <Settings
+            categories={categories}
+            onAddCategory={handleAddCategory}
+            onDeleteCategory={handleDeleteCategory}
             variableProfiles={variableProfiles}
             onUpdateProfiles={setVariableProfiles}
           />
@@ -192,20 +213,20 @@ const App: React.FC = () => {
           );
         }
         return (
-          <DocumentEditor 
-            document={editingDoc} 
+          <DocumentEditor
+            document={editingDoc}
             allDocuments={documents}
             categories={categories}
             variableProfiles={variableProfiles}
             activeProfileId={activeProfileId}
             onProfileChange={setActiveProfileId}
-            onSave={handleSave} 
+            onSave={handleSave}
             onRevise={handleCreateRevision}
             onSaveAsTemplate={handleSaveAsTemplate}
             onClose={() => {
               setEditingDoc(null);
               setActiveView('dashboard');
-            }} 
+            }}
           />
         );
       default:

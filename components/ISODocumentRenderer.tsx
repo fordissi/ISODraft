@@ -45,8 +45,7 @@ const MermaidDiagram: React.FC<{ chart: string }> = ({ chart }) => {
 };
 
 const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocuments, activeProfile }) => {
-  const approvalDate = data.approvalLog?.timestamp ? data.approvalLog.timestamp.split('T')[0] : "---";
-  
+
   // 動態取得文件階層的英文標籤
   const getDocTypeLabel = (level: ISODocLevel) => {
     if (level.includes('Level 1')) return "Quality Manual / 品質手冊";
@@ -84,7 +83,7 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
   const renderMarkdownBlocks = (content: string) => {
     const processedContent = processContent(content);
     const mermaidRegex = /```mermaid\s*\n([\s\S]*?)\n```/g;
-    
+
     // Split by mermaid blocks
     const parts = [];
     let lastIndex = 0;
@@ -110,26 +109,17 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
 
       const flushTable = () => {
         if (tableBuffer.length === 0) return;
-        
-        // Simple Table Parser
-        // Determine if it has a header row (second row contains ---)
         const hasHeader = tableBuffer.length >= 2 && tableBuffer[1].includes('---');
-        
-        // Parse rows
-        const rows = tableBuffer.map(row => 
-          row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())
-        );
-
-        // Determine alignments from the second row (e.g., :--- | :---: | ---:)
+        const rows = tableBuffer.map(row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
         const alignments = hasHeader ? tableBuffer[1].trim().replace(/^\||\|$/g, '').split('|').map(col => {
-            const c = col.trim();
-            if (c.startsWith(':') && c.endsWith(':')) return 'center';
-            if (c.endsWith(':')) return 'right';
-            return 'left';
+          const c = col.trim();
+          if (c.startsWith(':') && c.endsWith(':')) return 'center';
+          if (c.endsWith(':')) return 'right';
+          return 'left';
         }) : [];
 
         const headerRow = hasHeader ? rows[0] : null;
-        const bodyRows = hasHeader ? rows.slice(2) : rows; // Skip header and separator if present
+        const bodyRows = hasHeader ? rows.slice(2) : rows;
 
         elements.push(
           <div key={`table-${elements.length}`} className="my-6 overflow-x-auto border border-slate-200 rounded-lg">
@@ -139,7 +129,7 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
                   <tr>
                     {headerRow.map((cell, i) => (
                       <th key={i} className={`px-4 py-3 border-b border-slate-300 text-${alignments[i] || 'left'} whitespace-nowrap`}>
-                         <span dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                        <span dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                       </th>
                     ))}
                   </tr>
@@ -150,7 +140,7 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
                   <tr key={ri} className="hover:bg-slate-50/50">
                     {row.map((cell, ci) => (
                       <td key={ci} className={`px-4 py-3 text-slate-700 text-${alignments[ci] || 'left'} border-r border-slate-100 last:border-r-0`}>
-                         <span dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                        <span dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                       </td>
                     ))}
                   </tr>
@@ -164,49 +154,38 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
 
       lines.forEach((line, i) => {
         const trimmed = line.trim();
-        
-        // Table detection: Line starts with |
         if (trimmed.startsWith('|')) {
           tableBuffer.push(trimmed);
         } else {
           flushTable();
-          
           if (!trimmed) return;
-          
           let html = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-          // Reference highlights are handled in processContent but kept here for robustness
-          
           if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            elements.push(<li key={`li-${i}`} className="ml-6 list-disc text-slate-900 font-medium mb-1" dangerouslySetInnerHTML={{__html: html.substring(2)}} />);
+            elements.push(<li key={`li-${i}`} className="ml-6 list-disc text-slate-900 font-medium mb-1" dangerouslySetInnerHTML={{ __html: html.substring(2) }} />);
           } else if (trimmed.match(/^\d+\.\s/)) {
             const match = trimmed.match(/^(\d+)\.\s+(.*)/);
-            elements.push(<div key={`ol-${i}`} className="flex ml-2 mb-2"><span className="font-bold mr-2 text-slate-700">{match![1]}.</span><span className="font-medium text-slate-900" dangerouslySetInnerHTML={{__html: match![2]}}/></div>);
+            elements.push(<div key={`ol-${i}`} className="flex ml-2 mb-2"><span className="font-bold mr-2 text-slate-700">{match![1]}.</span><span className="font-medium text-slate-900" dangerouslySetInnerHTML={{ __html: match![2] }} /></div>);
           } else if (trimmed.startsWith('> ')) {
-            // Blockquote
-            elements.push(<blockquote key={`bq-${i}`} className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-slate-50 text-slate-700 italic rounded-r-lg" dangerouslySetInnerHTML={{__html: html.substring(2)}} />);
+            elements.push(<blockquote key={`bq-${i}`} className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-slate-50 text-slate-700 italic rounded-r-lg" dangerouslySetInnerHTML={{ __html: html.substring(2) }} />);
           } else if (trimmed.startsWith('### ')) {
-            // H3 Header
-            elements.push(<h3 key={`h3-${i}`} className="text-sm font-black mt-6 mb-3 text-slate-900 uppercase tracking-wider border-l-4 border-slate-900 pl-3" dangerouslySetInnerHTML={{__html: html.substring(4)}} />);
+            elements.push(<h3 key={`h3-${i}`} className="text-sm font-black mt-6 mb-3 text-slate-900 uppercase tracking-wider border-l-4 border-slate-900 pl-3" dangerouslySetInnerHTML={{ __html: html.substring(4) }} />);
           } else if (trimmed.startsWith('## ')) {
-            // H2 Header
-            elements.push(<h2 key={`h2-${i}`} className="text-base font-black mt-8 mb-4 text-slate-900" dangerouslySetInnerHTML={{__html: html.substring(3)}} />);
+            elements.push(<h2 key={`h2-${i}`} className="text-base font-black mt-8 mb-4 text-slate-900" dangerouslySetInnerHTML={{ __html: html.substring(3) }} />);
           } else {
-            // Paragraph
-            elements.push(<p key={`p-${i}`} className="mb-3 text-slate-900 font-medium leading-relaxed text-justify" dangerouslySetInnerHTML={{__html: html}} />);
+            elements.push(<p key={`p-${i}`} className="mb-3 text-slate-900 font-medium leading-relaxed text-justify" dangerouslySetInnerHTML={{ __html: html }} />);
           }
         }
       });
-      flushTable(); // Flush if the part ends with a table
-
+      flushTable();
       return <div key={`text-${partIndex}`}>{elements}</div>;
     });
   };
 
-  const signatures = [
-    { role: "制定 (Author)", name: data.author, date: data.createdAt.split('T')[0], isSigned: true },
-    { role: "審核 (Reviewer)", name: data.approvalLog ? data.approvalLog.reviewerName : (data.reviewerEmail || "---"), date: approvalDate, isSigned: !!data.approvalLog },
-    { role: "核准 (Approver)", name: data.approvalLog ? "Management" : "---", date: approvalDate, isSigned: !!data.approvalLog }
-  ];
+  // --- Signature Block Logic ---
+  // Structure: 3 Rows.
+  // Row 1: Author (Prepared By)
+  // Row 2: Reviewers (Reviewed By) - Dynamic Columns
+  // Row 3: Approver (Approved By) - Final
 
   return (
     <div className="iso-render-root flex flex-col items-center">
@@ -231,10 +210,64 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
 
         <div className="mb-10">
           <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-900 mb-2">核准簽署 / APPROVAL SIGNATURES</h4>
-          <table className="w-full border-collapse border-2 border-slate-900 text-[10px]">
-            <thead><tr className="bg-slate-100"><th className="border border-slate-900 px-3 py-2 text-left text-slate-900">職務 / Role</th><th className="border border-slate-900 px-3 py-2 text-left text-slate-900">姓名 / Name</th><th className="border border-slate-900 px-3 py-2 text-left text-slate-900">日期 / Date</th><th className="border border-slate-900 px-3 py-2 text-center text-slate-900">簽核 / Signature</th></tr></thead>
-            <tbody>{signatures.map((sig, i) => (<tr key={i}><td className="border border-slate-900 px-3 py-3 font-bold text-slate-900">{sig.role}</td><td className="border border-slate-900 px-3 py-3 text-slate-900">{sig.name}</td><td className="border border-slate-900 px-3 py-3 text-slate-900">{sig.date}</td><td className="border border-slate-900 px-3 py-3 text-center italic font-serif text-slate-900">{sig.isSigned ? <span className="text-blue-900 font-bold">/ Digitally Verified /</span> : <span className="text-slate-500">Pending</span>}</td></tr>))}</tbody>
-          </table>
+          <div className="border-2 border-slate-900">
+
+            {/* Row 1: Prepared By */}
+            <div className="flex border-b border-slate-900">
+              <div className="w-32 bg-slate-100 border-r border-slate-900 px-3 py-2 text-[10px] font-bold flex items-center">
+                制定 / Prepared By
+              </div>
+              <div className="flex-1 px-3 py-2 text-[10px] flex justify-between items-center">
+                <span className="font-black text-slate-900">{data.author}</span>
+                <span className="text-slate-500 font-mono">{data.createdAt.split('T')[0]}</span>
+              </div>
+            </div>
+
+            {/* Row 2: Reviewed By (Dynamic) */}
+            <div className="flex border-b border-slate-900 min-h-[3rem]">
+              <div className="w-32 bg-slate-100 border-r border-slate-900 px-3 py-2 text-[10px] font-bold flex items-center shrink-0">
+                審核 / Reviewed By
+              </div>
+              <div className="flex-1 flex divide-x divide-slate-400">
+                {data.reviewers && data.reviewers.length > 0 ? (
+                  data.reviewers.map(r => (
+                    <div key={r.id} className="flex-1 px-3 py-2 text-[10px] flex flex-col justify-center">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-black text-slate-900">{r.name}</span>
+                        <span className="text-slate-400 font-mono text-[9px]">{r.date || '-'}</span>
+                      </div>
+                      {r.status === 'approved' ? (
+                        <span className="text-blue-900 font-bold italic font-serif">/ Signed /</span>
+                      ) : (
+                        <span className="text-slate-300 italic">Pending</span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex-1 px-3 py-2 text-[10px] text-slate-400 italic flex items-center justify-center">No reviewers assigned.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Row 3: Approved By */}
+            <div className="flex">
+              <div className="w-32 bg-slate-100 border-r border-slate-900 px-3 py-2 text-[10px] font-bold flex items-center">
+                核准 / Approved By
+              </div>
+              <div className="flex-1 px-3 py-2 text-[10px] flex justify-between items-center">
+                <span className="font-black text-slate-900">{data.finalApprover?.name || '---'}</span>
+                <span className="text-slate-500 font-mono">{data.finalApprover?.date || '---'}</span>
+              </div>
+              <div className="px-4 py-2 border-l border-slate-900 flex items-center justify-center w-32">
+                {data.finalApprover?.status === 'approved' ? (
+                  <span className="text-emerald-700 font-black text-[10px] border-2 border-emerald-700 px-2 py-0.5 rounded rotate-[-2deg] opacity-80">APPROVED</span>
+                ) : (
+                  <span className="text-slate-300 text-[9px] italic">Pending</span>
+                )}
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <div className="mb-10">
@@ -246,24 +279,24 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
         </div>
 
         <div className="mt-auto border-t-2 border-slate-900 pt-4 flex justify-between items-center text-[8px] font-black text-slate-900 uppercase tracking-widest">
-           <span>Control Document - {activeProfile?.profileName || 'YourCompany'}</span>
-           <span>Page 1 / 2</span>
+          <span>Control Document - {activeProfile?.profileName || 'YourCompany'}</span>
+          <span>Page 1 / 2</span>
         </div>
       </div>
 
       {/* Page 2: Content Body */}
       <div className="iso-page">
         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-8 text-[9px] font-black text-slate-900 uppercase shrink-0">
-           <span>{data.title}</span>
-           <span>Doc No: {data.docNumber} | v{data.version}</span>
+          <span>{data.title}</span>
+          <span>Doc No: {data.docNumber} | v{data.version}</span>
         </div>
         <div className="flex-1 overflow-hidden">
           <div className="space-y-10">
             {data.sections.map((section) => (
               <div key={section.id} className="section-block">
                 <h2 className="text-sm font-black border-b-2 border-slate-900 pb-1 mb-3 uppercase tracking-tight flex items-center text-slate-900">
-                   <div className="bg-slate-900 text-white w-6 h-6 rounded flex items-center justify-center mr-3 text-[10px]">{section.title.split('.')[0]}</div>
-                   {section.title}
+                  <div className="bg-slate-900 text-white w-6 h-6 rounded flex items-center justify-center mr-3 text-[10px]">{section.title.split('.')[0]}</div>
+                  {section.title}
                 </h2>
                 <div className="pl-9 text-xs leading-[1.75] text-justify font-bold text-slate-900">
                   {renderMarkdownBlocks(section.content)}
@@ -273,8 +306,8 @@ const ISODocumentRenderer: React.FC<ISODocumentRendererProps> = ({ data, allDocu
           </div>
         </div>
         <div className="mt-auto border-t-2 border-slate-900 pt-4 flex justify-between items-center text-[8px] font-black text-slate-900 uppercase tracking-widest shrink-0">
-           <span>Control Document - {activeProfile?.profileName || 'YourCompany'}</span>
-           <span>Page 2 / 2</span>
+          <span>Control Document - {activeProfile?.profileName || 'YourCompany'}</span>
+          <span>Page 2 / 2</span>
         </div>
       </div>
     </div>

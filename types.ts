@@ -37,6 +37,23 @@ export interface RevisionEntry {
   author: string;
 }
 
+export interface ReviewerEntry {
+  id: string;
+  name: string;
+  title?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date?: string;
+  note?: string; // Evidence
+}
+
+export interface ApproverEntry {
+  name: string;
+  title?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date?: string;
+  note?: string; // Evidence
+}
+
 export interface ISODocument {
   id: string;
   title: string;
@@ -46,12 +63,18 @@ export interface ISODocument {
   category: string; 
   department: string;
   author: string;
-  reviewerEmail?: string;
+  
+  // Workflow Fields
+  status: 'draft' | 'review' | 'approving' | 'approved';
+  reviewers: ReviewerEntry[];
+  finalApprover: ApproverEntry;
+
   createdAt: string;
-  status: 'draft' | 'review' | 'approved'; 
   sections: DocSection[];
   revisions: RevisionEntry[];
-  approvalLog?: ApprovalLog;
+  
+  // Legacy fields (kept for compatibility during migration if needed, or strictly deprecated)
+  approvalLog?: ApprovalLog; 
   lockedContentSnapshot?: string;
   isTemplate?: boolean;
 }
